@@ -43,7 +43,7 @@ namespace BinaryTreeMaxSum
 
             for (int i = 0; i < inputStrings.Length; i++)
             {
-                inputValues[i] = inputStrings[i].Split(' ').Select(str => int.Parse(str)).ToList();
+                inputValues[i] = inputStrings[i].Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(str => int.Parse(str)).ToList();
             }
 
             return inputValues;
@@ -69,8 +69,8 @@ namespace BinaryTreeMaxSum
                     {
                         int parentValue = inputValues[rowIndex - 1][index - 1];
                         var parentCache = cache[parentRowIndex][index - 1];
-
-                        AddToCacheListWithOddEvenCheck(cacheList, parentCache, parentValue, val);
+                        
+                        AddMaxSumWithOddEvenCheck(cacheList, parentCache, parentValue, val);
                     }
 
                     if (inputValues[rowIndex].Count - index > 1)//check if there can be parent at top
@@ -78,15 +78,15 @@ namespace BinaryTreeMaxSum
                         int parentValue = inputValues[rowIndex - 1][index];
                         var parentCache = cache[parentRowIndex][index];
 
-                        AddToCacheListWithOddEvenCheck(cacheList, parentCache, parentValue, val);
+                        AddMaxSumWithOddEvenCheck(cacheList, parentCache, parentValue, val);
                     }
 
-                    if (inputValues[rowIndex].Count - index > 4)//check if there can be parent at right
+                    if (inputValues[rowIndex].Count - index > 3)//check if there can be parent at right
                     {
                         int parentValue = inputValues[rowIndex - 1][index + 1];
                         var parentCache = cache[parentRowIndex][index + 1];
 
-                        AddToCacheListWithOddEvenCheck(cacheList, parentCache, parentValue, val);
+                        AddMaxSumWithOddEvenCheck(cacheList, parentCache, parentValue, val);
                     }
 
                     cache[rowIndex].Add(cacheList);
@@ -96,15 +96,25 @@ namespace BinaryTreeMaxSum
             return cache;
         }
 
-        private static void AddToCacheListWithOddEvenCheck(List<CacheItem> list, List<CacheItem> parentCache, int parentValue, int currentVal)
+        private static void AddMaxSumWithOddEvenCheck(List<CacheItem> list, List<CacheItem> parentCache, int parentValue, int currentVal)
         {
             bool oddEvenOk = (currentVal + parentValue) % 2 != 0;
 
             if (oddEvenOk)
             {
+                CacheItem maxCache = null;
+
                 foreach (CacheItem parent in parentCache)
                 {
-                    list.Add(new CacheItem(parent.Sum + currentVal, currentVal, parent));
+                    if (maxCache == null || maxCache.Sum < parent.Sum + currentVal)
+                    {
+                        maxCache = new CacheItem(parent.Sum + currentVal, currentVal, parent);
+                    }
+                }
+
+                if (maxCache != null)
+                {
+                    list.Add(maxCache);
                 }
             }
         }
@@ -113,18 +123,7 @@ namespace BinaryTreeMaxSum
         {
             var bottomLineCache = cache[^1];
 
-            var maxCache = new CacheItem(0, 0, null);
-
-            for (int i = 0; i < bottomLineCache.Count; i++)//check all caches of every bottom value
-            {
-                if (bottomLineCache[i].Count == 0) continue;
-
-                var maxCacheForElement = bottomLineCache[i].OrderByDescending(p => p.Sum).First();//find max sum per value
-                if (maxCacheForElement.Sum > maxCache.Sum)
-                {
-                    maxCache = maxCacheForElement;
-                }
-            }
+            var maxCache = bottomLineCache.SelectMany(list => list).OrderByDescending(p => p.Sum).First();
 
             List<int> path = new List<int>();
 
