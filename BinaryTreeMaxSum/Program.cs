@@ -25,7 +25,7 @@ namespace BinaryTreeMaxSum
 
         static void Main(string[] args)
         {
-            List<int>[] inputValues = ParseInput(_input);
+            var inputValues = ParseInput(_input);
 
             var cache = BuildCache(inputValues);
 
@@ -36,94 +36,88 @@ namespace BinaryTreeMaxSum
             Console.ReadLine();
         }
 
-        private static List<int>[] ParseInput(string input)
+        private static int[][] ParseInput(string input)
         {
             string[] inputStrings = input.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-            List<int>[] inputValues = new List<int>[inputStrings.Length];
+            int[][] inputValues = new int[inputStrings.Length][];
 
             for (int i = 0; i < inputStrings.Length; i++)
             {
-                inputValues[i] = inputStrings[i].Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(str => int.Parse(str)).ToList();
+                inputValues[i] = inputStrings[i].Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(str => int.Parse(str)).ToArray();
             }
 
             return inputValues;
         }
 
-        private static List<List<CacheItem>>[] BuildCache(List<int>[] inputValues)
+        private static CacheItem[][] BuildCache(int[][] inputValues)
         {
-            List<List<CacheItem>>[] cache = new List<List<CacheItem>>[inputValues.Length];
-            cache[0] = new List<List<CacheItem>> { new List<CacheItem> { new CacheItem(inputValues[0][0], inputValues[0][0], null) } };//add cache for root element
+            CacheItem[][] cache = new CacheItem[inputValues.Length][];
+            cache[0] = new CacheItem[1] { new CacheItem(inputValues[0][0]) { LeftParentSum = inputValues[0][0] } };//add cache for root element
 
             for (int rowIndex = 1; rowIndex < inputValues.Length; rowIndex++)
             {
-                cache[rowIndex] = new List<List<CacheItem>>();
+                cache[rowIndex] = new CacheItem[inputValues[rowIndex].Length];
 
-                for (int index = 0; index < inputValues[rowIndex].Count; index++)
+                for (int index = 0; index < inputValues[rowIndex].Length; index++)
                 {
-                    List<CacheItem> cacheList = new List<CacheItem>();
-
-                    int parentRowIndex = rowIndex - 1;
                     int val = inputValues[rowIndex][index];
+                    int parentRowIndex = rowIndex - 1;
+
+                    CacheItem cacheItem = new CacheItem(val);
 
                     if (index > 0)//check if there can be parent at left
                     {
                         int parentValue = inputValues[rowIndex - 1][index - 1];
                         var parentCache = cache[parentRowIndex][index - 1];
-                        
-                        AddMaxSumWithOddEvenCheck(cacheList, parentCache, parentValue, val);
+
+                        if (CheckOddEven(parentValue, val))
+                        {
+                            cacheItem.LeftParent = parentCache;
+                            cacheItem.LeftParentSum = parentCache.MaxSum + val;
+                        }
                     }
 
-                    if (inputValues[rowIndex].Count - index > 1)//check if there can be parent at top
+                    if (inputValues[rowIndex].Length - index > 1)//check if there can be parent at top
                     {
                         int parentValue = inputValues[rowIndex - 1][index];
                         var parentCache = cache[parentRowIndex][index];
 
-                        AddMaxSumWithOddEvenCheck(cacheList, parentCache, parentValue, val);
+                        if (CheckOddEven(parentValue, val))
+                        {
+                            cacheItem.TopParent = parentCache;
+                            cacheItem.TopParentSum = parentCache.MaxSum + val;
+                        }
                     }
 
-                    if (inputValues[rowIndex].Count - index > 3)//check if there can be parent at right
+                    if (inputValues[rowIndex].Length - index > 3)//check if there can be parent at right
                     {
                         int parentValue = inputValues[rowIndex - 1][index + 1];
                         var parentCache = cache[parentRowIndex][index + 1];
 
-                        AddMaxSumWithOddEvenCheck(cacheList, parentCache, parentValue, val);
+                        if (CheckOddEven(parentValue, val))
+                        {
+                            cacheItem.RightParent = parentCache;
+                            cacheItem.RightParentSum = parentCache.MaxSum + val;
+                        }
                     }
 
-                    cache[rowIndex].Add(cacheList);
+                    cache[rowIndex][index] = cacheItem;
                 }
             }
 
             return cache;
         }
 
-        private static void AddMaxSumWithOddEvenCheck(List<CacheItem> list, List<CacheItem> parentCache, int parentValue, int currentVal)
+        private static bool CheckOddEven(int parentValue, int currentVal)
         {
-            bool oddEvenOk = (currentVal + parentValue) % 2 != 0;
-
-            if (oddEvenOk)
-            {
-                CacheItem maxCache = null;
-
-                foreach (CacheItem parent in parentCache)
-                {
-                    if (maxCache == null || maxCache.Sum < parent.Sum + currentVal)
-                    {
-                        maxCache = new CacheItem(parent.Sum + currentVal, currentVal, parent);
-                    }
-                }
-
-                if (maxCache != null)
-                {
-                    list.Add(maxCache);
-                }
-            }
+            return (currentVal + parentValue) % 2 != 0;
         }
 
-        private static (List<int>, long) GetPathAndMaxSumFromCache(List<List<CacheItem>>[] cache)
+        private static (List<int>, long) GetPathAndMaxSumFromCache(CacheItem[][] cache)
         {
             var bottomLineCache = cache[^1];
 
-            var maxCache = bottomLineCache.SelectMany(list => list).OrderByDescending(p => p.Sum).First();
+            var maxCache = bottomLineCache.OrderByDescending(p => p.MaxSum).First();
 
             List<int> path = new List<int>();
 
@@ -133,27 +127,60 @@ namespace BinaryTreeMaxSum
             {
                 path.Add(cacheItem.Value);
 
-                cacheItem = cacheItem.ParentCacheItem;
+                cacheItem = cacheItem.MaxParent;
             }
 
             path.Reverse();
 
-            return (path, maxCache.Sum);
+            return (path, maxCache.MaxSum);
         }
 
         private class CacheItem
         {
-            public long Sum { get; }
+            public long LeftParentSum { get; set; }
+            public CacheItem LeftParent { get; set; }
+
+
+            public long TopParentSum { get; set; }
+            public CacheItem TopParent { get; set; }
+
+
+            public long RightParentSum { get; set; }
+            public CacheItem RightParent { get; set; }
 
             public int Value { get; }
-            
-            public CacheItem ParentCacheItem { get; }
 
-            public CacheItem(long sum, int value, CacheItem parentCacheItem)
+            public CacheItem(int value)
             {
-                Sum = sum;
                 Value = value;
-                ParentCacheItem = parentCacheItem;
+            }
+
+            public long MaxSum
+            {
+                get
+                {
+                    return Math.Max(LeftParentSum, Math.Max(TopParentSum, RightParentSum));
+                }
+            }
+
+            public CacheItem MaxParent
+            {
+                get
+                {
+                    long maxSum = MaxSum;
+
+                    if (maxSum == LeftParentSum)
+                    {
+                        return LeftParent;
+                    }
+
+                    if (maxSum == RightParentSum)
+                    {
+                        return RightParent;
+                    }
+
+                    return TopParent;
+                }
             }
         }
     }
