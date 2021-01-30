@@ -67,7 +67,7 @@ namespace BinaryTreeMaxSum
 
                     if (index > 0)//check if there can be parent at left
                     {
-                        int parentValue = inputValues[rowIndex - 1][index - 1];
+                        int parentValue = inputValues[parentRowIndex][index - 1];
                         var parentCache = cache[parentRowIndex][index - 1];
 
                         if (CheckOddEven(parentValue, val))
@@ -79,7 +79,7 @@ namespace BinaryTreeMaxSum
 
                     if (inputValues[rowIndex].Length - index > 1)//check if there can be parent at top
                     {
-                        int parentValue = inputValues[rowIndex - 1][index];
+                        int parentValue = inputValues[parentRowIndex][index];
                         var parentCache = cache[parentRowIndex][index];
 
                         if (CheckOddEven(parentValue, val))
@@ -91,7 +91,7 @@ namespace BinaryTreeMaxSum
 
                     if (inputValues[rowIndex].Length - index > 3)//check if there can be parent at right
                     {
-                        int parentValue = inputValues[rowIndex - 1][index + 1];
+                        int parentValue = inputValues[parentRowIndex][index + 1];
                         var parentCache = cache[parentRowIndex][index + 1];
 
                         if (CheckOddEven(parentValue, val))
